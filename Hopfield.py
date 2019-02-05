@@ -1,4 +1,4 @@
-from numpy import array
+from numpy import array, arange, random, array_equal
 import PatternUtil
 
 class Hopfield:
@@ -25,53 +25,32 @@ class Hopfield:
         sgn = vectorize(lambda x: -1 if x<0 else +1)
         for _ in range(iter):
             patterns = sgn(dot(patterns, self.W))
-        
         return patterns
 
+    def async_recall(self, pattern, max_iters = 10): 
+        order = arange(25)
+        iter_count = 1 
+        prev_iter = pattern.copy() 
+        curr_iter = pattern.copy()
+        while iter_count != max_iters:
+            random.shuffle(order)
+            for order_number in order:
+                curr_iter[order_number] = self.update_node_async(curr_iter, order_number)
+            if(array_equal(prev_iter, curr_iter)):
+                break
+            else:
+                prev_iter = curr_iter.copy()
+                iter_count += 1
+        print("Recall converged at ", iter_count, " iterations")
+        return curr_iter
 
+    def update_node_async(self, curr_iter, order_number):
+        from numpy import dot
+        sign = lambda x: -1 if x < 0 else +1
+        return sign(dot(curr_iter, self.W[:,[order_number]]))
 
-A = """
-.XXX.
-X...X
-XXXXX
-X...X
-X...X
-"""
-
-A_c = """
-.X.X.
-..X.X
-.XX.X
-X.X..
-.X..X
-"""
-
-B = """
-XXXX.
-X...X
-XXXXX
-X...X
-XXXX.
-"""
-
-B_c = """
-.X.X.
-X.X..
-.X..X
-XX..X
-..XX.
-"""
-
-patterns_to_be_learned = array([PatternUtil.to_nparray(A), PatternUtil.to_nparray(B)])
-patterns_to_be_recalled = array([PatternUtil.to_nparray(A_c), PatternUtil.to_nparray(B_c)])
-
-for p in patterns_to_be_recalled:
-    PatternUtil.display_pattern(p)
-
-hf1 = Hopfield()
-hf1.train(patterns_to_be_learned)
-
-recalled_pattern = hf1.recall(patterns_to_be_recalled, 10)
-
-for p in recalled_pattern:
-    PatternUtil.display_pattern(p)
+    def predict_from_pattern(self, labels, training_data, pattern):
+        predictions = []
+        for data in training_data: 
+            predictions.append(array_equal(pattern,data))
+        print("Prediction: ", labels[predictions.index(True)])
